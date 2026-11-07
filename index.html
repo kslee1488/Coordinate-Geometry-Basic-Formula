@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Coordinate Geometry Explorer</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- KaTeX for LaTeX Math Rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Custom scrollbar for panel containers */
+        .scrollable-panel::-webkit-scrollbar { width: 8px; }
+        .scrollable-panel::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .scrollable-panel::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .scrollable-panel::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .katex-display { margin: 0.5em 0 !important; overflow-x: auto; overflow-y: hidden; }
+        
+        /* Prevent selection during drag */
+        .no-select { user-select: none; -webkit-user-select: none; }
+        
+        /* Number input clean up */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <header class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-indigo-700 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-4"/></svg>
+                    Coordinate Geometry Explorer
+                </h1>
+                <p class="text-sm text-slate-500 mt-1" id="header-subtitle">Interactive Distance, Slope, and Midpoint Formulas</p>
+            </div>
+            <div>
+                <button id="btn-toggle-quiz" onclick="toggleQuizMode()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                    <span id="quiz-btn-text">Enter Quiz Mode</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 py-6 w-full flex flex-col lg:flex-row gap-6 relative">
+        
+        <!-- Interactive Canvas Section -->
+        <section class="w-full lg:w-1/2 flex flex-col">
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex-grow flex flex-col relative no-select">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="font-semibold text-slate-700" id="canvas-title">Interactive Plane</h2>
+                    <div class="flex gap-3 text-sm">
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-blue-500"></span> P₁</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-rose-500"></span> P₂</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-emerald-500"></span> Mid</span>
+                    </div>
+                </div>
+                
+                <!-- Canvas Container -->
+                <div id="canvas-container" class="w-full relative bg-slate-50 rounded-xl overflow-hidden touch-none" style="aspect-ratio: 1/1;">
+                    <canvas id="math-canvas" class="absolute top-0 left-0 w-full h-full cursor-crosshair"></canvas>
+                </div>
+                
+                <p id="canvas-instructions" class="text-center text-sm text-slate-500 mt-4 flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3"/><path d="M9 5l3-3 3 3"/><path d="M19 9l3 3-3 3"/><path d="M15 19l-3 3-3-3"/><path d="M2 12h20"/><path d="M12 2v20"/></svg>
+                    Drag the Blue (P₁) and Red (P₂) points to explore.
+                </p>
+            </div>
+        </section>
+
+        <!-- Right Side Panels Container -->
+        <section class="w-full lg:w-1/2 flex flex-col h-full relative">
+            
+            <!-- EXPLORER PANEL -->
+            <div id="explorer-panel" class="flex flex-col gap-4 pb-10 w-full">
+                <!-- Coordinates Card -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-3 border-b pb-2">Current Coordinates</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-blue-50 text-blue-900 p-3 rounded-lg border border-blue-100 flex justify-center items-center">
+                            <span id="coord-p1" class="text-lg font-medium"></span>
+                        </div>
+                        <div class="bg-rose-50 text-rose-900 p-3 rounded-lg border border-rose-100 flex justify-center items-center">
+                            <span id="coord-p2" class="text-lg font-medium"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Distance Formula Card -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2 border-b pb-2">1. Distance Formula</h3>
+                    <p class="text-sm text-slate-600 mb-2">Calculates the shortest line segment length between two points.</p>
+                    <div id="dist-static" class="text-center text-slate-700"></div>
+                    <div class="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <div id="dist-dynamic" class="text-center text-indigo-700 font-medium overflow-x-auto"></div>
+                    </div>
+                </div>
+
+                <!-- Slope Formula Card -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2 border-b pb-2">2. Slope Formula</h3>
+                    <p class="text-sm text-slate-600 mb-2">Measures the steepness and direction of the line (<span id="slope-inline"></span>).</p>
+                    <div id="slope-static" class="text-center text-slate-700"></div>
+                    <div class="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <div id="slope-dynamic" class="text-center text-indigo-700 font-medium overflow-x-auto"></div>
+                    </div>
+                </div>
+
+                <!-- Midpoint Formula Card -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2 border-b pb-2">3. Midpoint Formula</h3>
+                    <p class="text-sm text-slate-600 mb-2">Finds the exact middle point of the line segment.</p>
+                    <div id="mid-static" class="text-center text-slate-700"></div>
+                    <div class="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <div id="mid-dynamic" class="text-center text-indigo-700 font-medium overflow-x-auto"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QUIZ PANEL -->
+            <div id="quiz-panel" class="hidden flex-col gap-4 pb-10 w-full h-full">
+                <!-- User Status Bar -->
+                <div class="bg-indigo-600 p-4 rounded-2xl shadow-sm text-white flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <div class="bg-white/20 p-2 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </div>
+                        <span id="quiz-user-name" class="font-semibold text-lg">Player</span>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs text-indigo-200 font-medium uppercase tracking-wider">Score</div>
+                        <div class="text-xl font-bold"><span id="quiz-score-correct">0</span> / <span id="quiz-score-attempted">0</span></div>
+                    </div>
+                </div>
+
+                <!-- Question Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex-grow">
+                    <h3 class="text-xl font-bold text-slate-800 mb-4 pb-2 border-b" id="quiz-question-title">Question</h3>
+                    
+                    <div class="mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <p class="text-slate-700 text-lg mb-2">Given the points:</p>
+                        <div class="flex gap-6 justify-center text-xl">
+                            <span id="quiz-q-p1" class="font-semibold text-blue-600"></span>
+                            <span id="quiz-q-p2" class="font-semibold text-rose-600"></span>
+                        </div>
+                    </div>
+
+                    <p class="text-lg text-slate-800 mb-4 font-medium" id="quiz-prompt-text"></p>
+                    
+                    <!-- Input Area (Swaps based on question type) -->
+                    <div id="quiz-input-container" class="mb-6">
+                        <!-- Single Value Input (Distance/Slope) -->
+                        <div id="quiz-input-single" class="hidden">
+                            <input type="number" step="0.01" id="quiz-ans-single" placeholder="Enter value..." class="w-full text-center text-xl p-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors" autocomplete="off">
+                            <p class="text-sm text-slate-500 mt-2 text-center">Round to 2 decimal places if needed.</p>
+                        </div>
+
+                        <!-- Coordinate Input (Midpoint) -->
+                        <div id="quiz-input-coord" class="hidden flex items-center justify-center gap-3 text-2xl">
+                            ( 
+                            <input type="number" step="0.5" id="quiz-ans-x" placeholder="x" class="w-24 text-center p-2 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors" autocomplete="off"> 
+                            , 
+                            <input type="number" step="0.5" id="quiz-ans-y" placeholder="y" class="w-24 text-center p-2 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors" autocomplete="off"> 
+                            )
+                        </div>
+                    </div>
+
+                    <button id="btn-submit-answer" onclick="checkQuizAnswer()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold text-lg transition-colors shadow-sm">
+                        Submit Answer
+                    </button>
+
+                    <!-- Feedback Area -->
+                    <div id="quiz-feedback" class="mt-6 hidden">
+                        <div id="quiz-feedback-banner" class="p-4 rounded-xl mb-4 font-bold text-lg text-center"></div>
+                        <div id="quiz-solution-container" class="hidden">
+                            <p class="font-semibold text-slate-700 mb-2">Solution:</p>
+                            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 overflow-x-auto">
+                                <div id="quiz-solution-math" class="text-center text-slate-800"></div>
+                            </div>
+                            <button onclick="generateQuizQuestion()" class="w-full mt-4 bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl font-bold transition-colors">
+                                Next Question
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Name Prompt Modal -->
+    <div id="name-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full mx-4 transform transition-all">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-800">Ready to Test Your Skills?</h2>
+                <p class="text-slate-600 mt-2">Enter your name to start the quiz mode.</p>
+            </div>
+            <input type="text" id="player-name-input" placeholder="Your Name" class="w-full p-3 border-2 border-slate-200 rounded-xl mb-6 focus:border-indigo-500 focus:outline-none transition-colors text-lg text-center" onkeypress="if(event.key === 'Enter') startQuiz()">
+            <div class="flex gap-3">
+                <button onclick="cancelQuizStart()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl font-semibold transition-colors">Cancel</button>
+                <button onclick="startQuiz()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold transition-colors shadow-sm">Start Quiz</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State Management
+        const state = {
+            p1: { x: -4, y: -3 },
+            p2: { x: 5, y: 4 },
+            gridSize: 10,
+            dragging: null
+        };
+
+        const quizState = {
+            active: false,
+            name: '',
+            correct: 0,
+            attempted: 0,
+            currentType: '', // 'distance', 'slope', 'midpoint'
+            solutionLatex: ''
+        };
+
+        // Static LaTeX Formulas
+        const staticFormulas = {
+            dist: `d = \\sqrt{(x_2 - x_1)^2 + (y_2 - y_1)^2}`,
+            slope: `m = \\frac{y_2 - y_1}{x_2 - x_1}`,
+            mid: `M = \\left( \\frac{x_1 + x_2}{2}, \\frac{y_1 + y_2}{2} \\right)`
+        };
+
+        // GAS Cloud Sync URL
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzI7uinwu8HSGbdz0EYPw3AkBxuOOQYtX3-rkWneVggwapqio_PaKldzUkJxcEX/exec';
+
+        // DOM Elements
+        const canvas = document.getElementById('math-canvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvas-container');
+
+        // Initialization
+        function initMath() {
+            if (typeof katex === 'undefined') {
+                setTimeout(initMath, 100);
+                return;
+            }
+            
+            renderLatex('dist-static', staticFormulas.dist, true);
+            renderLatex('slope-static', staticFormulas.slope, true);
+            renderLatex('mid-static', staticFormulas.mid, true);
+            renderLatex('slope-inline', 'm = \\frac{\\text{rise}}{\\text{run}}', false);
+            
+            resizeCanvas();
+            updateFormulas();
+        }
+
+        function renderLatex(elementId, latex, displayMode = false) {
+            katex.render(latex, document.getElementById(elementId), {
+                throwOnError: false,
+                displayMode: displayMode,
+                strict: false
+            });
+        }
+
+        function fmt(num) { return num < 0 ? `(${num})` : `${num}`; }
+
+        // Core Calculation & Dynamic Formatting
+        function calculateCurrentMath() {
+            const { p1, p2 } = state;
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+
+            // Distance
+            const distSq = dx*dx + dy*dy;
+            const dist = Math.sqrt(distSq);
+            const distLatex = `\\begin{aligned} 
+                d &= \\sqrt{(${fmt(p2.x)} - ${fmt(p1.x)})^2 + (${fmt(p2.y)} - ${fmt(p1.y)})^2} \\\\ 
+                &= \\sqrt{(${dx})^2 + (${dy})^2} \\\\ 
+                &= \\sqrt{${distSq}} \\approx ${dist.toFixed(2)} 
+            \\end{aligned}`;
+
+            // Slope
+            let slopeLatex, slopeVal;
+            if (dx === 0) {
+                slopeLatex = `m = \\frac{${fmt(p2.y)} - ${fmt(p1.y)}}{${fmt(p2.x)} - ${fmt(p1.x)}} = \\frac{${dy}}{0} \\quad (\\text{Undefined})`;
+                slopeVal = null; // Undefined
+            } else {
+                slopeVal = dy / dx;
+                slopeLatex = `m = \\frac{${fmt(p2.y)} - ${fmt(p1.y)}}{${fmt(p2.x)} - ${fmt(p1.x)}} 
+                    = \\frac{${dy}}{${dx}} 
+                    = ${Number.isInteger(slopeVal) ? slopeVal : slopeVal.toFixed(2)}`;
+            }
+
+            // Midpoint
+            const midX = (p1.x + p2.x) / 2;
+            const midY = (p1.y + p2.y) / 2;
+            const midLatex = `\\begin{aligned}
+                M &= \\left( \\frac{${fmt(p1.x)} + ${fmt(p2.x)}}{2}, \\frac{${fmt(p1.y)} + ${fmt(p2.y)}}{2} \\right) \\\\
+                &= \\left( \\frac{${p1.x + p2.x}}{2}, \\frac{${p1.y + p2.y}}{2} \\right) \\\\
+                &= (${midX}, ${midY})
+            \\end{aligned}`;
+
+            return {
+                dist, distLatex,
+                slope: slopeVal, slopeLatex,
+                midX, midY, midLatex, dx, dy
+            };
+        }
+
+        function updateFormulas() {
+            if (quizState.active) return; // Don't update explorer formulas if in quiz mode
+
+            const math = calculateCurrentMath();
+            const { p1, p2 } = state;
+            
+            renderLatex('coord-p1', `P_1 = (${p1.x}, ${p1.y})`);
+            renderLatex('coord-p2', `P_2 = (${p2.x}, ${p2.y})`);
+            renderLatex('dist-dynamic', math.distLatex, true);
+            renderLatex('slope-dynamic', math.slopeLatex, true);
+            renderLatex('mid-dynamic', math.midLatex, true);
+        }
+
+        // --- Canvas Drawing ---
+        function mathToScreen(mx, my) {
+            const w = canvas.width / window.devicePixelRatio;
+            const h = canvas.height / window.devicePixelRatio;
+            const sx = ((mx + state.gridSize) / (state.gridSize * 2)) * w;
+            const sy = ((state.gridSize - my) / (state.gridSize * 2)) * h;
+            return { x: sx, y: sy };
+        }
+
+        function screenToMath(sx, sy) {
+            const w = canvas.width / window.devicePixelRatio;
+            const h = canvas.height / window.devicePixelRatio;
+            let mx = (sx / w) * (state.gridSize * 2) - state.gridSize;
+            let my = state.gridSize - (sy / h) * (state.gridSize * 2);
+            return { x: Math.round(mx), y: Math.round(my) };
+        }
+
+        function drawCanvas() {
+            const w = canvas.width / window.devicePixelRatio;
+            const h = canvas.height / window.devicePixelRatio;
+            ctx.clearRect(0, 0, w, h);
+
+            // Grid
+            ctx.strokeStyle = '#f1f5f9';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -state.gridSize; i <= state.gridSize; i++) {
+                const p1 = mathToScreen(i, -state.gridSize);
+                const p2 = mathToScreen(i, state.gridSize);
+                ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+                const p3 = mathToScreen(-state.gridSize, i);
+                const p4 = mathToScreen(state.gridSize, i);
+                ctx.moveTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y);
+            }
+            ctx.stroke();
+
+            // Axes
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 2;
+            const origin = mathToScreen(0, 0);
+            ctx.beginPath();
+            ctx.moveTo(origin.x, 0); ctx.lineTo(origin.x, h);
+            ctx.moveTo(0, origin.y); ctx.lineTo(w, origin.y);
+            ctx.stroke();
+
+            // Axis Labels
+            ctx.fillStyle = '#64748b';
+            ctx.font = '16px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            for (let i = -state.gridSize; i <= state.gridSize; i++) {
+                if (i !== 0 && i % 2 === 0) {
+                    const px = mathToScreen(i, 0);
+                    ctx.fillText(i, px.x, origin.y + 5);
+                    const py = mathToScreen(0, i);
+                    ctx.textAlign = 'right';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(i, origin.x - 5, py.y);
+                }
+            }
+
+            const sp1 = mathToScreen(state.p1.x, state.p1.y);
+            const sp2 = mathToScreen(state.p2.x, state.p2.y);
+
+            // Triangle & Lines (only show triangle in Explorer Mode to avoid giving away slope/distance hints directly in quiz)
+            if (!quizState.active) {
+                const pCorner = mathToScreen(state.p2.x, state.p1.y);
+                ctx.strokeStyle = '#cbd5e1';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(sp1.x, sp1.y);
+                ctx.lineTo(pCorner.x, pCorner.y);
+                ctx.lineTo(sp2.x, sp2.y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Main Line
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(sp1.x, sp1.y);
+            ctx.lineTo(sp2.x, sp2.y);
+            ctx.stroke();
+
+            // Midpoint
+            const midX = (state.p1.x + state.p2.x) / 2;
+            const midY = (state.p1.y + state.p2.y) / 2;
+            const sMid = mathToScreen(midX, midY);
+            
+            // Only show midpoint visually in Explorer mode
+            if (!quizState.active) {
+                ctx.fillStyle = '#10b981'; 
+                ctx.beginPath(); ctx.arc(sMid.x, sMid.y, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke();
+            }
+
+            // Points P1 and P2
+            ctx.fillStyle = '#3b82f6'; ctx.beginPath(); ctx.arc(sp1.x, sp1.y, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#f43f5e'; ctx.beginPath(); ctx.arc(sp2.x, sp2.y, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+            // Labels setup
+            ctx.font = 'bold 18px Inter, sans-serif';
+            ctx.fillStyle = '#1e293b';
+            ctx.textAlign = 'left';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.lineWidth = 5;
+            ctx.lineJoin = 'round';
+
+            const p1Label = `P₁ (${state.p1.x}, ${state.p1.y})`;
+            ctx.strokeText(p1Label, sp1.x + 15, sp1.y - 15);
+            ctx.fillText(p1Label, sp1.x + 15, sp1.y - 15);
+
+            const p2Label = `P₂ (${state.p2.x}, ${state.p2.y})`;
+            ctx.strokeText(p2Label, sp2.x + 15, sp2.y - 15);
+            ctx.fillText(p2Label, sp2.x + 15, sp2.y - 15);
+
+            if (!quizState.active) {
+                const mLabel = `M (${midX}, ${midY})`;
+                ctx.strokeText(mLabel, sMid.x + 15, sMid.y - 15);
+                ctx.fillText(mLabel, sMid.x + 15, sMid.y - 15);
+            }
+        }
+
+        // --- Interaction ---
+        function getEventPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            let cX = e.touches ? e.touches[0].clientX : e.clientX;
+            let cY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: cX - rect.left, y: cY - rect.top };
+        }
+
+        function handlePointerDown(e) {
+            if (quizState.active) return; // Disable drag during quiz
+            e.preventDefault();
+            const pos = getEventPos(e);
+            const sp1 = mathToScreen(state.p1.x, state.p1.y);
+            const sp2 = mathToScreen(state.p2.x, state.p2.y);
+            
+            if (Math.hypot(pos.x - sp1.x, pos.y - sp1.y) < 25) state.dragging = 'p1';
+            else if (Math.hypot(pos.x - sp2.x, pos.y - sp2.y) < 25) state.dragging = 'p2';
+        }
+
+        function handlePointerMove(e) {
+            if (!state.dragging || quizState.active) return;
+            e.preventDefault();
+            let mathPos = screenToMath(getEventPos(e).x, getEventPos(e).y);
+            mathPos.x = Math.max(-state.gridSize, Math.min(state.gridSize, mathPos.x));
+            mathPos.y = Math.max(-state.gridSize, Math.min(state.gridSize, mathPos.y));
+
+            if (state.dragging === 'p1' && (mathPos.x !== state.p2.x || mathPos.y !== state.p2.y)) state.p1 = mathPos;
+            else if (state.dragging === 'p2' && (mathPos.x !== state.p1.x || mathPos.y !== state.p1.y)) state.p2 = mathPos;
+
+            drawCanvas();
+            updateFormulas();
+        }
+
+        canvas.addEventListener('mousedown', handlePointerDown);
+        window.addEventListener('mousemove', handlePointerMove);
+        window.addEventListener('mouseup', () => state.dragging = null);
+        canvas.addEventListener('touchstart', handlePointerDown, {passive: false});
+        window.addEventListener('touchmove', handlePointerMove, {passive: false});
+        window.addEventListener('touchend', () => state.dragging = null);
+
+        function resizeCanvas() {
+            const rect = container.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            drawCanvas();
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+
+        // --- QUIZ LOGIC ---
+
+        function toggleQuizMode() {
+            if (quizState.active) {
+                // Exit Quiz Mode
+                quizState.active = false;
+                document.getElementById('explorer-panel').classList.remove('hidden');
+                document.getElementById('quiz-panel').classList.add('hidden');
+                document.getElementById('btn-toggle-quiz').classList.replace('bg-rose-600', 'bg-indigo-600');
+                document.getElementById('btn-toggle-quiz').classList.replace('hover:bg-rose-700', 'hover:bg-indigo-700');
+                document.getElementById('quiz-btn-text').innerText = 'Enter Quiz Mode';
+                document.getElementById('canvas-title').innerText = 'Interactive Plane';
+                document.getElementById('canvas-instructions').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3"/><path d="M9 5l3-3 3 3"/><path d="M19 9l3 3-3 3"/><path d="M15 19l-3 3-3-3"/><path d="M2 12h20"/><path d="M12 2v20"/></svg> Drag the Blue (P₁) and Red (P₂) points to explore.';
+                
+                drawCanvas();
+                updateFormulas();
+            } else {
+                // Enter Quiz Mode Flow
+                document.getElementById('name-modal').classList.remove('hidden');
+                document.getElementById('player-name-input').value = '';
+                document.getElementById('player-name-input').focus();
+            }
+        }
+
+        function cancelQuizStart() {
+            document.getElementById('name-modal').classList.add('hidden');
+        }
+
+        function startQuiz() {
+            const nameInput = document.getElementById('player-name-input').value.trim();
+            if (!nameInput) return;
+
+            document.getElementById('name-modal').classList.add('hidden');
+            
+            // Setup state
+            quizState.active = true;
+            quizState.name = nameInput;
+            quizState.correct = 0;
+            quizState.attempted = 0;
+            
+            // Update UI
+            document.getElementById('quiz-user-name').innerText = quizState.name;
+            updateScoreUI();
+            
+            document.getElementById('explorer-panel').classList.add('hidden');
+            document.getElementById('quiz-panel').classList.remove('hidden');
+            document.getElementById('quiz-panel').classList.add('flex');
+            
+            document.getElementById('btn-toggle-quiz').classList.replace('bg-indigo-600', 'bg-rose-600');
+            document.getElementById('btn-toggle-quiz').classList.replace('hover:bg-indigo-700', 'hover:bg-rose-700');
+            document.getElementById('quiz-btn-text').innerText = 'Exit Quiz Mode';
+            document.getElementById('canvas-title').innerText = 'Quiz Plane (Locked)';
+            document.getElementById('canvas-instructions').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Points are locked during the quiz.';
+
+            generateQuizQuestion();
+        }
+
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function generateQuizQuestion() {
+            // Reset UI States
+            document.getElementById('quiz-feedback').classList.add('hidden');
+            document.getElementById('quiz-solution-container').classList.add('hidden');
+            document.getElementById('btn-submit-answer').classList.remove('hidden');
+            document.getElementById('quiz-ans-single').value = '';
+            document.getElementById('quiz-ans-x').value = '';
+            document.getElementById('quiz-ans-y').value = '';
+
+            // Generate Random Points
+            let newP1, newP2;
+            do {
+                newP1 = { x: getRandomInt(-8, 8), y: getRandomInt(-8, 8) };
+                newP2 = { x: getRandomInt(-8, 8), y: getRandomInt(-8, 8) };
+            } while (newP1.x === newP2.x && newP1.y === newP2.y); // Ensure different points
+
+            // Avoid vertical lines for slope questions to simplify input (no "undefined" string parsing)
+            if (newP1.x === newP2.x) newP1.x += 1;
+
+            state.p1 = newP1;
+            state.p2 = newP2;
+            drawCanvas();
+
+            // Display Points in Question
+            renderLatex('quiz-q-p1', `P_1 = (${state.p1.x}, ${state.p1.y})`);
+            renderLatex('quiz-q-p2', `P_2 = (${state.p2.x}, ${state.p2.y})`);
+
+            // Pick question type
+            const types = ['distance', 'slope', 'midpoint'];
+            quizState.currentType = types[getRandomInt(0, 2)];
+            
+            const math = calculateCurrentMath();
+
+            if (quizState.currentType === 'distance') {
+                document.getElementById('quiz-prompt-text').innerText = "Calculate the Distance (d) between the two points.";
+                document.getElementById('quiz-input-single').classList.remove('hidden');
+                document.getElementById('quiz-input-coord').classList.add('hidden');
+                document.getElementById('quiz-input-coord').classList.remove('flex');
+                quizState.solutionLatex = math.distLatex;
+                setTimeout(()=>document.getElementById('quiz-ans-single').focus(), 100);
+            } else if (quizState.currentType === 'slope') {
+                document.getElementById('quiz-prompt-text').innerText = "Calculate the Slope (m) of the line connecting the points.";
+                document.getElementById('quiz-input-single').classList.remove('hidden');
+                document.getElementById('quiz-input-coord').classList.add('hidden');
+                document.getElementById('quiz-input-coord').classList.remove('flex');
+                quizState.solutionLatex = math.slopeLatex;
+                setTimeout(()=>document.getElementById('quiz-ans-single').focus(), 100);
+            } else {
+                document.getElementById('quiz-prompt-text').innerText = "Calculate the Midpoint (x, y) of the line segment.";
+                document.getElementById('quiz-input-single').classList.add('hidden');
+                document.getElementById('quiz-input-coord').classList.remove('hidden');
+                document.getElementById('quiz-input-coord').classList.add('flex');
+                quizState.solutionLatex = math.midLatex;
+                setTimeout(()=>document.getElementById('quiz-ans-x').focus(), 100);
+            }
+        }
+
+        function checkQuizAnswer() {
+            const math = calculateCurrentMath();
+            let isCorrect = false;
+
+            if (quizState.currentType === 'distance') {
+                const userVal = parseFloat(document.getElementById('quiz-ans-single').value);
+                if (isNaN(userVal)) return alert("Please enter a valid number.");
+                isCorrect = Math.abs(userVal - math.dist) < 0.05; // Tolerance for rounding
+            } else if (quizState.currentType === 'slope') {
+                const userVal = parseFloat(document.getElementById('quiz-ans-single').value);
+                if (isNaN(userVal)) return alert("Please enter a valid number.");
+                isCorrect = Math.abs(userVal - math.slope) < 0.05;
+            } else if (quizState.currentType === 'midpoint') {
+                const userX = parseFloat(document.getElementById('quiz-ans-x').value);
+                const userY = parseFloat(document.getElementById('quiz-ans-y').value);
+                if (isNaN(userX) || isNaN(userY)) return alert("Please enter valid numbers for both coordinates.");
+                isCorrect = (Math.abs(userX - math.midX) < 0.01) && (Math.abs(userY - math.midY) < 0.01);
+            }
+
+            quizState.attempted++;
+            
+            const feedbackBox = document.getElementById('quiz-feedback');
+            const banner = document.getElementById('quiz-feedback-banner');
+            const btnSubmit = document.getElementById('btn-submit-answer');
+            
+            feedbackBox.classList.remove('hidden');
+            btnSubmit.classList.add('hidden');
+
+            if (isCorrect) {
+                quizState.correct++;
+                banner.className = "p-4 rounded-xl mb-4 font-bold text-lg text-center bg-emerald-100 text-emerald-800 border border-emerald-200";
+                banner.innerHTML = `🎉 Correct! Loading next question in <span id="countdown">3</span>...`;
+                
+                let count = 3;
+                const interval = setInterval(() => {
+                    count--;
+                    if(document.getElementById('countdown')) {
+                         document.getElementById('countdown').innerText = count;
+                    }
+                    if (count <= 0) {
+                        clearInterval(interval);
+                        if (quizState.active) generateQuizQuestion();
+                    }
+                }, 1000);
+
+            } else {
+                banner.className = "p-4 rounded-xl mb-4 font-bold text-lg text-center bg-rose-100 text-rose-800 border border-rose-200";
+                banner.innerHTML = `❌ Incorrect. Let's look at the solution.`;
+                
+                document.getElementById('quiz-solution-container').classList.remove('hidden');
+                renderLatex('quiz-solution-math', quizState.solutionLatex, true);
+            }
+            
+            updateScoreUI();
+            syncScoreToCloud();
+        }
+
+        function syncScoreToCloud() {
+            if (!quizState.active || !quizState.name) return;
+
+            const payload = {
+                name: quizState.name,
+                correct: quizState.correct,
+                attempted: quizState.attempted,
+                timestamp: new Date().toISOString()
+            };
+
+            // Using text/plain to bypass CORS preflight issues with Google Apps Script
+            fetch(GAS_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8'
+                },
+                body: JSON.stringify(payload)
+            }).catch(err => console.error("Cloud Sync Error:", err));
+        }
+
+        function updateScoreUI() {
+            document.getElementById('quiz-score-correct').innerText = quizState.correct;
+            document.getElementById('quiz-score-attempted').innerText = quizState.attempted;
+        }
+
+        // Enable pressing enter to submit
+        document.getElementById('quiz-input-container').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') checkQuizAnswer();
+        });
+
+        window.onload = initMath;
+    </script>
+</body>
+</html>
